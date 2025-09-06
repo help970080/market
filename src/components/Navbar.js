@@ -1,9 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Search, User, Plus, Menu } from 'lucide-react';
+import { Home, Search, User, Plus, Menu, LogOut } from 'lucide-react';
+import { useAuth } from '../AuthContext'; // Importa el hook de autenticación
 
 const Navbar = () => {
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <motion.nav
       className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 shadow-lg z-50 md:relative md:top-0 md:shadow-none md:border-none md:bg-transparent"
@@ -25,8 +32,24 @@ const Navbar = () => {
         <div className="flex w-full md:w-auto justify-around md:gap-8">
           <NavLink to="/" icon={Home} label="Inicio" />
           <NavLink to="/search" icon={Search} label="Buscar" />
-          <NavLink to="/add-product" icon={Plus} label="Vender" />
-          <NavLink to="/profile" icon={User} label="Perfil" />
+          {user ? (
+            <>
+              <NavLink to="/add-product" icon={Plus} label="Vender" />
+              <NavLink to="/profile" icon={User} label="Perfil" />
+              <button onClick={handleSignOut} className="flex flex-col items-center text-gray-600 hover:text-red-600 transition-colors duration-200">
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 rounded-full"
+                >
+                  <LogOut className="w-6 h-6" />
+                </motion.div>
+                <span className="text-xs font-medium mt-1 hidden md:block">Salir</span>
+              </button>
+            </>
+          ) : (
+            <NavLink to="/signin" icon={User} label="Ingresar" />
+          )}
           <NavLink to="/menu" icon={Menu} label="Más" className="md:hidden" />
         </div>
       </div>

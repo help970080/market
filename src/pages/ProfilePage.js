@@ -1,14 +1,85 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UserCircle, ShoppingBag, Truck } from 'lucide-react';
+import { useAuth } from '../AuthContext';
+import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
+import ProductCard from '../components/ProductCard';
 
 const ProfilePage = () => {
-  // Aquí podrías agregar lógica para cargar los datos del usuario,
-  // sus compras y sus productos a la venta.
-  const user = {
-    name: "Usuario Ejemplo",
-    email: "ejemplo@detodounpoco.com",
-  };
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/signin');
+      return;
+    }
+
+    if (user) {
+      const fetchData = async () => {
+        try {
+          // Obtener datos del usuario
+          const { data: profileData, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profileError) throw profileError;
+          setProfile(profileData);
+
+          // Obtener los productos del usuario
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select(`
+              *,
+              categories ( name )
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (productsError) throw productsError;
+
+          setProducts(productsData.map(p => ({ ...p, category_name: p.categories?.name })));
+
+        } catch (err) {
+          console.error("Error fetching data:", err);
+          setError("No pudimos cargar tus datos. Intenta de nuevo.");
+        } finally {
+          setDataLoading(false);
+        }
+      };
+
+      fetchData();
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading || dataLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-120px)]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <UserCircle className="w-12 h-12 text-blue-500" />
+        </motion.div>
+        <p className="ml-4 text-lg text-gray-600">Cargando perfil...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-red-500 text-xl">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -22,20 +93,24 @@ const ProfilePage = () => {
       </h2>
       <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-lg mx-auto text-center">
         <UserCircle className="w-24 h-24 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-2xl font-semibold text-gray-800">{user.name}</h3>
-        <p className="text-gray-600">{user.email}</p>
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-blue-50 rounded-xl">
-            <ShoppingBag className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-            <h4 className="font-semibold text-blue-700">Mis Compras</h4>
-            <p className="text-gray-500 text-sm">Pronto verás aquí tus compras.</p>
+        <h3 className="text-2xl font-semibold text-gray-800">{profile?.username || 'Usuario'}</h3>
+        <p className="text-gray-600">{profile?.email || user.email}</p>
+      </div>
+
+      <div className="mt-12">
+        <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center md:text-left">Mis Productos a la Venta</h3>
+        {products.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-gray-600 text-xl">No tienes productos publicados.</p>
+            <p className="text-gray-500 mt-2">¡Sube tu primer producto para empezar a vender!</p>
           </div>
-          <div className="p-4 bg-purple-50 rounded-xl">
-            <Truck className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-            <h4 className="font-semibold text-purple-700">Mis Ventas</h4>
-            <p className="text-gray-500 text-sm">Pronto verás aquí tus productos vendidos.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </motion.div>
   );

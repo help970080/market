@@ -2,42 +2,66 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { PlusCircle, Tag, DollarSign, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '../AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const AddProductPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  if (!user) {
+    navigate('/signin');
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
-    // Aún no implementamos la lógica de autenticación para obtener el user_id
-    // Por ahora, usamos un valor por defecto o un ID de prueba
-    const user_id = 'c1301c36-e886-45ef-89ac-fe673752e04e'; 
-
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert([
-          {
-            name: productName,
-            description: description,
-            price: parseFloat(price),
-            user_id: user_id,
-            // Agrega más campos aquí como category_id, condition, etc.
-          },
-        ]);
+      let imageUrls = [];
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
 
-      if (error) throw error;
+        const { error: uploadError } = await supabase.storage
+          .from('products')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('products')
+          .getPublicUrl(filePath);
+
+        imageUrls.push(publicUrlData.publicUrl);
+      }
+
+      const { error: insertError } = await supabase
+        .from('products')
+        .insert({
+          name: productName,
+          description: description,
+          price: parseFloat(price),
+          user_id: user.id,
+          images: imageUrls,
+        });
+
+      if (insertError) throw insertError;
 
       setMessage('¡Producto agregado con éxito!');
       setProductName('');
       setDescription('');
       setPrice('');
+      setImageFile(null);
 
     } catch (err) {
       console.error("Error adding product:", err);
@@ -86,6 +110,14 @@ const AddProductPage = () => {
               onChange={(e) => setPrice(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 font-medium mb-2">Imagen</label>
+            <input
+              type="file"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
           <div className="flex justify-center items-center">
