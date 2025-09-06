@@ -4,7 +4,8 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import SearchPage from './pages/SearchPage';
-// Importa otras páginas aquí cuando las crees (ej: ProfilePage, AddProductPage, ChatPage)
+import AddProductPage from './pages/AddProductPage'; // Importa el nuevo componente
+import ProfilePage from './pages/ProfilePage'; // Importa el nuevo componente
 
 export default function App() {
   return (
@@ -16,19 +17,9 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/product/:id" element={<ProductDetailPage />} />
             <Route path="/search" element={<SearchPage />} />
-            {/* Agrega más rutas aquí */}
-            <Route path="/add-product" element={
-              <div className="text-center py-20">
-                <h2 className="text-3xl font-bold text-gray-800">Página "Vender" en construcción</h2>
-                <p className="text-gray-600 mt-4">¡Pronto podrás subir tus productos!</p>
-              </div>
-            } />
-            <Route path="/profile" element={
-              <div className="text-center py-20">
-                <h2 className="text-3xl font-bold text-gray-800">Página de "Perfil" en construcción</h2>
-                <p className="text-gray-600 mt-4">Aquí verás tus compras, ventas y más.</p>
-              </div>
-            } />
+            {/* Las siguientes rutas ahora usan los componentes reales */}
+            <Route path="/add-product" element={<AddProductPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/menu" element={
               <div className="text-center py-20">
                 <h2 className="text-3xl font-bold text-gray-800">Menú de opciones</h2>
