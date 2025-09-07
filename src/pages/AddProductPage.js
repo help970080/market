@@ -11,11 +11,12 @@ const AddProductPage = () => {
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('');
+  const [condition, setCondition] = useState('nuevo');
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Si el usuario no ha iniciado sesión, lo redirigimos a la página de inicio de sesión.
   if (!user) {
     navigate('/signin');
     return null;
@@ -32,14 +33,12 @@ const AddProductPage = () => {
         const fileExt = imageFile.name.split('.').pop();
         const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-        // 1. Subir la imagen
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('products')
           .upload(filePath, imageFile);
 
         if (uploadError) throw uploadError;
 
-        // 2. Obtener la URL pública.
         const { data: publicUrl } = supabase
           .storage
           .from('products')
@@ -48,17 +47,19 @@ const AddProductPage = () => {
         imageUrls.push(publicUrl.publicUrl);
       }
 
-      // 3. Insertar el producto en la base de datos
+      // CORRECCIÓN: Cambiado de seller_id a user_id
       const { data, error: insertError } = await supabase
         .from('products')
         .insert({
           name: productName,
           description: description,
           price: parseFloat(price),
-          seller_id: user.id, // Asegúrate de que este nombre coincida con tu base de datos
+          user_id: user.id, // ← CAMBIADO AQUÍ
           images: imageUrls,
+          condition: condition,
+          currency: 'MXN'
         })
-        .select(); // Usamos .select() para confirmar que la fila se insertó
+        .select();
 
       if (insertError) {
         console.error("Error de inserción:", insertError);
@@ -69,7 +70,11 @@ const AddProductPage = () => {
       setProductName('');
       setDescription('');
       setPrice('');
+      setCategory('');
       setImageFile(null);
+
+      // Redirigir después de 2 segundos
+      setTimeout(() => navigate('/'), 2000);
 
     } catch (err) {
       console.error("Error adding product:", err);
@@ -121,19 +126,36 @@ const AddProductPage = () => {
             />
           </div>
           <div className="mb-4">
+            <label className="block text-gray-700 font-medium mb-2">Condición</label>
+            <select
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="nuevo">Nuevo</option>
+              <option value="usado">Usado</option>
+              <option value="reacondicionado">Reacondicionado</option>
+            </select>
+          </div>
+          <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-2">Imagen</label>
             <input
               type="file"
               onChange={(e) => setImageFile(e.target.files[0])}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              accept="image/*"
             />
           </div>
-          <div className="flex justify-center items-center">
-            {message && <p className="mt-4 text-center text-green-600 font-semibold">{message}</p>}
-          </div>
+          {message && (
+            <div className={`mb-4 p-3 rounded-xl text-center font-semibold ${
+              message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {message}
+            </div>
+          )}
           <motion.button
             type="submit"
-            className="w-full mt-6 px-6 py-4 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center font-semibold text-lg"
+            className="w-full mt-6 px-6 py-4 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center font-semibold text-lg disabled:opacity-50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={loading}

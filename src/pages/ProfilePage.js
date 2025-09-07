@@ -23,9 +23,9 @@ const ProfilePage = () => {
     if (user) {
       const fetchData = async () => {
         try {
-          // Obtener datos del usuario
+          // Obtener datos del usuario desde profiles (EN INGLÉS)
           const { data: profileData, error: profileError } = await supabase
-            .from('users')
+            .from('profiles') // ← CORREGIDO
             .select('*')
             .eq('id', user.id)
             .single();
@@ -94,7 +94,7 @@ const ProfilePage = () => {
       <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-lg mx-auto text-center">
         <UserCircle className="w-24 h-24 text-gray-400 mx-auto mb-4" />
         <h3 className="text-2xl font-semibold text-gray-800">{profile?.username || 'Usuario'}</h3>
-        <p className="text-gray-600">{profile?.email || user.email}</p>
+        <p className="text-gray-600">{profile?.email || user?.email}</p>
       </div>
 
       <div className="mt-12">
