@@ -44,18 +44,19 @@ const AddProductPage = () => {
 
         imageUrls.push(publicUrlData.publicUrl);
       }
-
-      const { error: insertError } = await supabase
-        .from('products')
-        .insert({
+      
+      // Llamada a la función de Supabase para insertar el producto
+      const { data, error } = await supabase.functions.invoke('add_product', {
+        body: {
           name: productName,
           description: description,
           price: parseFloat(price),
-          id_del_usuario: user.id, // ¡Aquí está la corrección!
+          seller_id: user.id,
           images: imageUrls,
-        });
+        },
+      });
 
-      if (insertError) throw insertError;
+      if (error) throw error;
 
       setMessage('¡Producto agregado con éxito! 🎉');
       setProductName('');
