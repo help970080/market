@@ -25,20 +25,14 @@ const SignInPage = () => {
         setMessage('Sesión iniciada con éxito. Redirigiendo...');
         setTimeout(() => navigate('/'), 1500);
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
 
-        // Si el registro es exitoso, inserta el nombre de usuario en la tabla 'users'
-        const { error: profileError } = await supabase.from('users').insert({
-          id: data.user.id,
-          username: username,
-          email: email
-        });
-
-        if (profileError) throw profileError;
+        // El código para insertar el perfil del usuario se ha eliminado.
+        // Ahora, el trigger de la base de datos se encarga de esto.
 
         setMessage('Registro exitoso. Revisa tu correo para confirmar.');
       }
