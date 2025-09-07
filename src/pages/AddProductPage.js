@@ -30,33 +30,40 @@ const AddProductPage = () => {
       let imageUrls = [];
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
+        // 1. Subir la imagen
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('products')
-          .upload(fileName, imageFile);
+          .upload(filePath, imageFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: publicUrlData } = supabase.storage
+        // 2. Obtener la URL pública.
+        const { data: publicUrl } = supabase
+          .storage
           .from('products')
-          .getPublicUrl(fileName);
+          .getPublicUrl(filePath);
 
-        imageUrls.push(publicUrlData.publicUrl);
+        imageUrls.push(publicUrl.publicUrl);
       }
-      
-      // Llamada a la función de Supabase para insertar el producto
-      const { data, error } = await supabase.functions.invoke('add_product', {
-        body: {
+
+      // 3. Insertar el producto en la base de datos
+      const { data, error: insertError } = await supabase
+        .from('products')
+        .insert({
           name: productName,
           description: description,
           price: parseFloat(price),
-          seller_id: user.id,
+          seller_id: user.id, // Asegúrate de que este nombre coincida con tu base de datos
           images: imageUrls,
-        },
-      });
+        })
+        .select(); // Usamos .select() para confirmar que la fila se insertó
 
-      if (error) throw error;
+      if (insertError) {
+        console.error("Error de inserción:", insertError);
+        throw insertError;
+      }
 
       setMessage('¡Producto agregado con éxito! 🎉');
       setProductName('');
