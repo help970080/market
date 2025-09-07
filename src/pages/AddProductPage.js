@@ -15,6 +15,7 @@ const AddProductPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Si el usuario no ha iniciado sesión, lo redirigimos a la página de inicio de sesión.
   if (!user) {
     navigate('/signin');
     return null;
@@ -51,7 +52,7 @@ const AddProductPage = () => {
           name: productName,
           description: description,
           price: parseFloat(price),
-          user_id: user.id, // <-- Corrección clave aquí
+          user_id: user.id,
           images: imageUrls,
         });
 
