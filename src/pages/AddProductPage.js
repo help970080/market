@@ -51,7 +51,7 @@ const AddProductPage = () => {
           name: productName,
           description: description,
           price: parseFloat(price),
-          seller_id: user.id, // ¡Aquí está la corrección!
+          id_del_usuario: user.id, // ¡Aquí está la corrección!
           images: imageUrls,
         });
 
