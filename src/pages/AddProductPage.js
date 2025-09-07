@@ -30,18 +30,17 @@ const AddProductPage = () => {
       let imageUrls = [];
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('products')
-          .upload(filePath, imageFile);
+          .upload(fileName, imageFile);
 
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage
           .from('products')
-          .getPublicUrl(filePath);
+          .getPublicUrl(fileName);
 
         imageUrls.push(publicUrlData.publicUrl);
       }
@@ -52,13 +51,13 @@ const AddProductPage = () => {
           name: productName,
           description: description,
           price: parseFloat(price),
-          user_id: user.id,
+          seller_id: user.id, // ¡Aquí está la corrección!
           images: imageUrls,
         });
 
       if (insertError) throw insertError;
 
-      setMessage('¡Producto agregado con éxito!');
+      setMessage('¡Producto agregado con éxito! 🎉');
       setProductName('');
       setDescription('');
       setPrice('');
