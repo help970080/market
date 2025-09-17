@@ -14,7 +14,7 @@
     "framer-motion": "^11.3.2",
     "lucide-react": "^0.400.0",
     "react-router-dom": "^6.24.1",
-    "@supabase/supabase-js": "^2.44.3"
+    "firebase": "^10.0.0"
   },
   "main": "/index.js",
   "devDependencies": {
