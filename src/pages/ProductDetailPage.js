@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../supabaseClient';
+import { db } from '../firebase';
+import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { DollarSign, Tag, User, Clock, Image, Video, AlertCircle, ArrowLeft, MessageSquare } from 'lucide-react';
 
 const ProductDetailPage = () => {
@@ -16,25 +17,22 @@ const ProductDetailPage = () => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            categories ( name ),
-            users ( username, email )
-          `)
-          .eq('id', id)
-          .single();
+        const docRef = doc(db, 'products', id);
+        const docSnap = await getDoc(docRef);
 
-        if (error) throw error;
-        if (!data) throw new Error("Producto no encontrado. ¡Se esfumó!");
-
-        setProduct({
-          ...data,
-          category_name: data.categories.name,
-          seller_username: data.users.username,
-          seller_email: data.users.email
-        });
+        if (docSnap.exists()) {
+          const productData = docSnap.data();
+          
+          setProduct({
+            id: docSnap.id,
+            ...productData,
+            category_name: productData.category_name || 'Sin Categoría',
+            seller_username: productData.seller_username || 'Usuario Desconocido',
+            seller_email: productData.seller_email || ''
+          });
+        } else {
+          setError("Producto no encontrado. ¡Se esfumó!");
+        }
       } catch (err) {
         console.error("Error fetching product:", err);
         setError("No pudimos cargar los detalles del producto. ¿Se lo comió un duende?");
@@ -48,12 +46,10 @@ const ProductDetailPage = () => {
 
   const handleBuyNow = () => {
     alert('¡Felicidades! Has simulado la compra. En una app real, aquí iría el proceso de pago y confirmación.');
-    // Aquí iría la lógica para crear una transacción en la base de datos
   };
 
   const handleExchange = () => {
     alert('¡Intercambio iniciado! Ahora podrías seleccionar qué producto ofreces.');
-    // Aquí iría la lógica para iniciar un intercambio
   };
 
   const handleNextImage = () => {
@@ -101,7 +97,7 @@ const ProductDetailPage = () => {
   }
 
   if (!product) {
-    return null; // No debería pasar si error se maneja correctamente
+    return null;
   }
 
   const hasMedia = (product.images && product.images.length > 0) || (product.videos && product.videos.length > 0);
@@ -141,7 +137,7 @@ const ProductDetailPage = () => {
               )}
               {product.videos && product.videos.length > 0 && !product.images && (
                 <motion.video
-                  key={product.videos[0]} // Assuming only one video for simplicity
+                  key={product.videos[0]}
                   src={product.videos[0]}
                   controls
                   className="w-full h-96 object-contain rounded-2xl bg-gray-100"

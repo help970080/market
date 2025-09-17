@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UserCircle, ShoppingBag, Truck } from 'lucide-react';
 import { useAuth } from '../AuthContext';
-import { supabase } from '../supabaseClient';
+import { db } from '../firebase';
+import { doc, getDoc, collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 
@@ -23,29 +24,25 @@ const ProfilePage = () => {
     if (user) {
       const fetchData = async () => {
         try {
-          // Obtener datos del usuario desde profiles (EN INGLÉS)
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles') // ← CORREGIDO
-            .select('*')
-            .eq('id', user.id)
-            .single();
+          // Obtener datos del usuario desde Firestore
+          const profileRef = doc(db, 'users', user.uid);
+          const profileSnap = await getDoc(profileRef);
 
-          if (profileError) throw profileError;
-          setProfile(profileData);
+          if (profileSnap.exists()) {
+            setProfile(profileSnap.data());
+          }
 
           // Obtener los productos del usuario
-          const { data: productsData, error: productsError } = await supabase
-            .from('products')
-            .select(`
-              *,
-              categories ( name )
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+          const productsCol = collection(db, 'products');
+          const q = query(productsCol, where('seller_id', '==', user.uid), orderBy('createdAt', 'desc'));
+          const productsSnapshot = await getDocs(q);
+          
+          const productsList = productsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
 
-          if (productsError) throw productsError;
-
-          setProducts(productsData.map(p => ({ ...p, category_name: p.categories?.name })));
+          setProducts(productsList);
 
         } catch (err) {
           console.error("Error fetching data:", err);

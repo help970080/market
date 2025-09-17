@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../supabaseClient';
 import { Mail, Lock, User as UserIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 
 const SignInPage = () => {
   const [isSignIn, setIsSignIn] = useState(true);
@@ -12,11 +12,7 @@ const SignInPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
-
-  // Generar username automático basado en el email si está vacío
-  const generateUsernameFromEmail = (email) => {
-    return email.split('@')[0] + Math.floor(Math.random() * 1000);
-  };
+  const { signIn, signUp } = useAuth();
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -25,64 +21,18 @@ const SignInPage = () => {
 
     try {
       if (isSignIn) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signIn(email, password);
         setMessage('Sesión iniciada con éxito. Redirigiendo...');
         setTimeout(() => navigate('/'), 1500);
       } else {
-        // Validar que el username no esté vacío
-        let finalUsername = username.trim();
-        if (!finalUsername) {
-          finalUsername = generateUsernameFromEmail(email);
-        }
-
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              username: finalUsername
-            }
-          }
-        });
-        
-        if (authError) throw authError;
-
-        // Insertar perfil en la tabla profiles con username garantizado
-        if (authData.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,
-              username: finalUsername,
-              email: email
-            });
-
-          if (profileError) {
-            console.error("Error creando perfil:", profileError);
-            // Si falla por username duplicado, generar uno único
-            if (profileError.code === '23505') {
-              const uniqueUsername = generateUsernameFromEmail(email);
-              await supabase
-                .from('profiles')
-                .insert({
-                  id: authData.user.id,
-                  username: uniqueUsername,
-                  email: email
-                });
-            }
-          }
-        }
-
-        setMessage('Registro exitoso. Revisa tu correo para confirmar.');
-        // Limpiar formulario
-        setUsername('');
-        setEmail('');
-        setPassword('');
+        const finalUsername = username.trim() || email.split('@')[0];
+        await signUp(email, password, finalUsername);
+        setMessage('¡Registro exitoso! Redirigiendo para iniciar sesión...');
+        setTimeout(() => navigate('/'), 1500);
       }
-    } catch (error) {
-      console.error("Error completo:", error);
-      setMessage(error.message || 'Error durante el registro. Intenta de nuevo.');
+    } catch (err) {
+      console.error("Authentication error:", err);
+      setMessage(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -91,59 +41,59 @@ const SignInPage = () => {
   return (
     <motion.div
       className="container mx-auto px-4 py-8 pt-20 md:pt-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-lg mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-          {isSignIn ? 'Iniciar Sesión' : 'Registrarse'}
-        </h2>
+      <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+        {isSignIn ? 'Iniciar Sesión' : 'Registrarse'}
+      </h2>
+      <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-sm mx-auto">
         <form onSubmit={handleAuth}>
           {!isSignIn && (
             <div className="mb-4">
-              <label className="block text-gray-700 font-medium mb-2">
-                Nombre de Usuario *
-              </label>
+              <label className="block text-gray-700 font-medium mb-2">Nombre de Usuario</label>
               <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <UserIcon className="w-5 h-5 text-gray-400" />
+                </div>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  required={!isSignIn}
-                  placeholder="Ej: juan123"
+                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  placeholder="Elige un nombre"
                 />
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                {!username ? 'Se generará uno automáticamente si lo dejas vacío' : ''}
-              </p>
             </div>
           )}
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-2">Email *</label>
+            <label className="block text-gray-700 font-medium mb-2">Email</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Mail className="w-5 h-5 text-gray-400" />
+              </div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 required
-                placeholder="tu@email.com"
+                placeholder="tu-email@ejemplo.com"
               />
             </div>
           </div>
           <div className="mb-6">
-            <label className="block text-gray-700 font-medium mb-2">Contraseña *</label>
+            <label className="block text-gray-700 font-medium mb-2">Contraseña</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Lock className="w-5 h-5 text-gray-400" />
+              </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 required
                 minLength="6"
                 placeholder="Mínimo 6 caracteres"
@@ -152,8 +102,8 @@ const SignInPage = () => {
           </div>
           {message && (
             <div className={`mb-4 p-3 rounded-xl text-center font-semibold ${
-              message.includes('Error') || message.includes('error') 
-                ? 'bg-red-100 text-red-700' 
+              message.includes('Error') || message.includes('error')
+                ? 'bg-red-100 text-red-700'
                 : 'bg-green-100 text-green-700'
             }`}>
               {message}

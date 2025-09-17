@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../supabaseClient';
+import { db } from '../firebase';
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import ProductCard from '../components/ProductCard';
 import { Rocket } from 'lucide-react';
 
@@ -13,18 +14,16 @@ const HomePage = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            categories ( name )
-          `)
-          .order('created_at', { ascending: false })
-          .limit(12);
+        const productsCol = collection(db, 'products');
+        const q = query(productsCol, orderBy('createdAt', 'desc'));
+        const productsSnapshot = await getDocs(q);
 
-        if (error) throw error;
-
-        setProducts(data.map(p => ({ ...p, category_name: p.categories.name })));
+        const productsList = productsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setProducts(productsList);
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("No pudimos cargar los productos. ¡El internet nos odia!");

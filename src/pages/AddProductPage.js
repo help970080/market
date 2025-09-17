@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../supabaseClient';
-import { PlusCircle, Tag, DollarSign, Image as ImageIcon } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc } from "firebase/firestore";
 import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,9 +11,7 @@ const AddProductPage = () => {
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
   const [condition, setCondition] = useState('nuevo');
-  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -28,49 +26,21 @@ const AddProductPage = () => {
     setMessage('');
 
     try {
-      let imageUrls = [];
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('products')
-          .upload(filePath, imageFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrl } = supabase
-          .storage
-          .from('products')
-          .getPublicUrl(filePath);
-
-        imageUrls.push(publicUrl.publicUrl);
-      }
-
-      const { data, error: insertError } = await supabase
-        .from('products')
-        .insert({
-          name: productName,
-          description: description,
-          price: parseFloat(price),
-          seller_id: user.id,
-          images: imageUrls,
-          condition: condition,
-          currency: 'MXN'
-        })
-        .select();
-
-      if (insertError) {
-        console.error("Error de inserción:", insertError);
-        throw insertError;
-      }
+      await addDoc(collection(db, "products"), {
+        name: productName,
+        description: description,
+        price: parseFloat(price),
+        seller_id: user.uid,
+        condition: condition,
+        currency: 'MXN',
+        createdAt: new Date(),
+        images: [] // En un proyecto real, subirías esto a Cloud Storage y guardarías la URL
+      });
 
       setMessage('¡Producto agregado con éxito! 🎉');
       setProductName('');
       setDescription('');
       setPrice('');
-      setCategory('');
-      setImageFile(null);
 
       setTimeout(() => navigate('/'), 2000);
 
@@ -135,15 +105,7 @@ const AddProductPage = () => {
               <option value="reacondicionado">Reacondicionado</option>
             </select>
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-2">Imagen</label>
-            <input
-              type="file"
-              onChange={(e) => setImageFile(e.target.files[0])}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              accept="image/*"
-            />
-          </div>
+          {/* Omitido el campo de imagen por ahora para enfocarnos en la base de datos */}
           {message && (
             <div className={`mb-4 p-3 rounded-xl text-center font-semibold ${
               message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'

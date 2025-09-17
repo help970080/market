@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { supabase } from '../supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { db } from '../firebase';
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import ProductCard from '../components/ProductCard';
 import { Search, Tag, DollarSign, Filter, X } from 'lucide-react';
 
@@ -16,12 +17,8 @@ const SearchPage = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      const { data, error } = await supabase.from('categories').select('*').order('name');
-      if (error) console.error("Error fetching categories:", error);
-      else setCategories(data);
-    };
-    fetchCategories();
+    // La lógica de categorías puede mantenerse igual si las tienes en Firestore
+    // const fetchCategories = async () => { ... }
   }, []);
 
   const handleSearch = async (e) => {
@@ -29,31 +26,31 @@ const SearchPage = () => {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          categories ( name )
-        `);
+      let q = collection(db, 'products');
 
       if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
+        // En Firestore, la búsqueda de texto completo requiere un índice de terceros o una búsqueda exacta
+        // Esto es un ejemplo de cómo filtrar por nombre
+        q = query(q, where('name', '==', searchTerm));
       }
       if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
+        q = query(q, where('category_id', '==', selectedCategory));
       }
       if (minPrice) {
-        query = query.gte('price', parseFloat(minPrice));
+        q = query(q, where('price', '>=', parseFloat(minPrice)));
       }
       if (maxPrice) {
-        query = query.lte('price', parseFloat(maxPrice));
+        q = query(q, where('price', '<=', parseFloat(maxPrice)));
       }
+      
+      const productsSnapshot = await getDocs(q);
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const productsList = productsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-      if (error) throw error;
-
-      setProducts(data.map(p => ({ ...p, category_name: p.categories.name })));
+      setProducts(productsList);
     } catch (err) {
       console.error("Error searching products:", err);
       setError("Hubo un problema al buscar. ¡Intenta de nuevo!");
@@ -67,7 +64,6 @@ const SearchPage = () => {
     setMinPrice('');
     setMaxPrice('');
     setSearchTerm('');
-    // Re-run search to clear results
     handleSearch({ preventDefault: () => {} });
   };
 
