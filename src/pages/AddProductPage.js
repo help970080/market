@@ -47,14 +47,13 @@ const AddProductPage = () => {
         imageUrls.push(publicUrl.publicUrl);
       }
 
-      // CORRECCIÓN: Cambiado de seller_id a user_id
       const { data, error: insertError } = await supabase
         .from('products')
         .insert({
           name: productName,
           description: description,
           price: parseFloat(price),
-          user_id: user.id, // ← CAMBIADO AQUÍ
+          seller_id: user.id, // <-- CORRECCIÓN AQUÍ
           images: imageUrls,
           condition: condition,
           currency: 'MXN'
@@ -73,7 +72,6 @@ const AddProductPage = () => {
       setCategory('');
       setImageFile(null);
 
-      // Redirigir después de 2 segundos
       setTimeout(() => navigate('/'), 2000);
 
     } catch (err) {
