@@ -47,14 +47,13 @@ const AddProductPage = () => {
         imageUrls.push(publicUrl.publicUrl);
       }
 
-      // CORRECCIÓN: Se utiliza 'seller_id' para insertar el ID del usuario.
       const { data, error: insertError } = await supabase
         .from('products')
         .insert({
           name: productName,
           description: description,
           price: parseFloat(price),
-          seller_id: user.id, // <-- ¡Esto es lo que faltaba!
+          seller_id: user.id,
           images: imageUrls,
           condition: condition,
           currency: 'MXN'
